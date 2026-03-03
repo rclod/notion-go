@@ -1,0 +1,38 @@
+{
+  "object": "data_source",
+  "id": "ds_some_id",
+  "title": [
+    {
+      "type": "text",
+      "text": {
+        "content": "Updated Source",
+        "link": null
+      },
+      "plain_text": "Updated Source"
+    }
+  ],
+  "properties": {
+    "Name": {
+      "id": "title",
+      "type": "title",
+      "title": {}
+    },
+    "Priority": {
+      "id": "xyz1",
+      "type": "select",
+      "select": {
+        "options": [
+          {
+            "id": "opt1",
+            "name": "High",
+            "color": "red"
+          }
+        ]
+      }
+    }
+  },
+  "parent": {
+    "type": "database_id",
+    "database_id": "parent_db_id"
+  }
+}

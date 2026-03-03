@@ -1,0 +1,52 @@
+{
+  "object": "database",
+  "id": "db_id",
+  "created_time": "2021-05-24T05:06:34.827Z",
+  "last_edited_time": "2021-05-24T05:06:34.827Z",
+  "created_by": {
+    "object": "user",
+    "id": "some_id"
+  },
+  "last_edited_by": {
+    "object": "user",
+    "id": "some_id"
+  },
+  "title": [
+    {
+      "type": "text",
+      "text": {
+        "content": "Multi-Source DB",
+        "link": null
+      },
+      "annotations": {
+        "bold": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false,
+        "code": false,
+        "color": "default"
+      },
+      "plain_text": "Multi-Source DB",
+      "href": null
+    }
+  ],
+  "parent": {
+    "type": "page_id",
+    "page_id": "parent_page_id"
+  },
+  "url": "https://www.notion.so/db_id",
+  "public_url": "",
+  "description": [],
+  "is_inline": false,
+  "archived": false,
+  "data_sources": [
+    {
+      "id": "ds_id_1",
+      "name": "Main"
+    },
+    {
+      "id": "ds_id_2",
+      "name": "External"
+    }
+  ]
+}

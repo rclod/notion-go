@@ -1,0 +1,43 @@
+{
+  "object": "data_source",
+  "id": "ds_some_id",
+  "title": [
+    {
+      "type": "text",
+      "text": {
+        "content": "Main Source",
+        "link": null
+      },
+      "plain_text": "Main Source"
+    }
+  ],
+  "properties": {
+    "Name": {
+      "id": "title",
+      "type": "title",
+      "title": {}
+    },
+    "Status": {
+      "id": "abc1",
+      "type": "select",
+      "select": {
+        "options": [
+          {
+            "id": "opt1",
+            "name": "To Do",
+            "color": "red"
+          },
+          {
+            "id": "opt2",
+            "name": "Done",
+            "color": "green"
+          }
+        ]
+      }
+    }
+  },
+  "parent": {
+    "type": "database_id",
+    "database_id": "parent_db_id"
+  }
+}
