@@ -2,9 +2,7 @@ package notionapi
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -56,70 +54,19 @@ type DataSourceClient struct {
 //
 // See https://developers.notion.com/reference/retrieve-a-data-source
 func (dc *DataSourceClient) Get(ctx context.Context, id DataSourceID) (*DataSource, error) {
-	res, err := dc.apiClient.request(ctx, http.MethodGet, fmt.Sprintf("data_sources/%s", id.String()), nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if errClose := res.Body.Close(); errClose != nil {
-			log.Println("failed to close body, should never happen")
-		}
-	}()
-
-	var response DataSource
-	err = json.NewDecoder(res.Body).Decode(&response)
-	if err != nil {
-		return nil, err
-	}
-
-	return &response, nil
+	return doRequest[DataSource](dc.apiClient, ctx, http.MethodGet, fmt.Sprintf("data_sources/%s", id.String()), nil, nil)
 }
 
 // Update modifies a data source's schema or metadata.
 //
 // See https://developers.notion.com/reference/update-a-data-source
 func (dc *DataSourceClient) Update(ctx context.Context, id DataSourceID, requestBody *DataSourceUpdateRequest) (*DataSource, error) {
-	res, err := dc.apiClient.request(ctx, http.MethodPatch, fmt.Sprintf("data_sources/%s", id.String()), nil, requestBody)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if errClose := res.Body.Close(); errClose != nil {
-			log.Println("failed to close body, should never happen")
-		}
-	}()
-
-	var response DataSource
-	err = json.NewDecoder(res.Body).Decode(&response)
-	if err != nil {
-		return nil, err
-	}
-
-	return &response, nil
+	return doRequest[DataSource](dc.apiClient, ctx, http.MethodPatch, fmt.Sprintf("data_sources/%s", id.String()), nil, requestBody)
 }
 
 // Query returns pages from a data source, with optional filtering and sorting.
 //
 // See https://developers.notion.com/reference/post-data-source-query
 func (dc *DataSourceClient) Query(ctx context.Context, id DataSourceID, requestBody *DatabaseQueryRequest) (*DatabaseQueryResponse, error) {
-	res, err := dc.apiClient.request(ctx, http.MethodPost, fmt.Sprintf("data_sources/%s/query", id.String()), nil, requestBody)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if errClose := res.Body.Close(); errClose != nil {
-			log.Println("failed to close body, should never happen")
-		}
-	}()
-
-	var response DatabaseQueryResponse
-	err = json.NewDecoder(res.Body).Decode(&response)
-	if err != nil {
-		return nil, err
-	}
-
-	return &response, nil
+	return doRequest[DatabaseQueryResponse](dc.apiClient, ctx, http.MethodPost, fmt.Sprintf("data_sources/%s/query", id.String()), nil, requestBody)
 }

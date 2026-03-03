@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -116,11 +115,26 @@ func WithOAuthAppCredentials(id, secret string) ClientOption {
 	}
 }
 
-func (c *Client) request(ctx context.Context, method string, urlStr string, queryParams map[string]string, requestBody interface{}) (*http.Response, error) {
+func (c *Client) request(ctx context.Context, method string, urlStr string, queryParams map[string]string, requestBody any) (*http.Response, error) {
 	return c.requestImpl(ctx, method, urlStr, queryParams, requestBody, false, decodeClientError)
 }
 
-func (c *Client) requestImpl(ctx context.Context, method string, urlStr string, queryParams map[string]string, requestBody interface{}, basicAuth bool, errDecoder errJsonDecodeFunc) (*http.Response, error) {
+// doRequest performs an HTTP request and JSON-decodes the response body into T.
+func doRequest[T any](c *Client, ctx context.Context, method, url string, queryParams map[string]string, body any) (*T, error) {
+	res, err := c.request(ctx, method, url, queryParams, body)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	var response T
+	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
+func (c *Client) requestImpl(ctx context.Context, method string, urlStr string, queryParams map[string]string, requestBody any, basicAuth bool, errDecoder errJsonDecodeFunc) (*http.Response, error) {
 	u, err := c.baseUrl.Parse(fmt.Sprintf("%s/%s", c.apiVersion, urlStr))
 	if err != nil {
 		return nil, err
@@ -192,7 +206,7 @@ func (c *Client) requestImpl(ctx context.Context, method string, urlStr string, 
 	}
 
 	if res.StatusCode != http.StatusOK {
-		data, err := ioutil.ReadAll(res.Body)
+		data, err := io.ReadAll(res.Body)
 		if err != nil {
 			return nil, err
 		}

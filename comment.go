@@ -2,8 +2,6 @@ package notionapi
 
 import (
 	"context"
-	"encoding/json"
-	"log"
 	"net/http"
 	"time"
 )
@@ -36,24 +34,7 @@ type CommentClient struct {
 //
 // See https://developers.notion.com/reference/create-a-comment
 func (cc *CommentClient) Create(ctx context.Context, requestBody *CommentCreateRequest) (*Comment, error) {
-	res, err := cc.apiClient.request(ctx, http.MethodPost, "comments", nil, requestBody)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if errClose := res.Body.Close(); errClose != nil {
-			log.Println("failed to close body, should never happen")
-		}
-	}()
-
-	var response Comment
-	err = json.NewDecoder(res.Body).Decode(&response)
-	if err != nil {
-		return nil, err
-	}
-
-	return &response, nil
+	return doRequest[Comment](cc.apiClient, ctx, http.MethodPost, "comments", nil, requestBody)
 }
 
 // CommentCreateRequest represents the request body for CommentClient.Create.
@@ -71,28 +52,8 @@ func (cc *CommentClient) Get(ctx context.Context, id BlockID, pagination *Pagina
 	if pagination != nil {
 		queryParams = pagination.ToQuery()
 	}
-
 	queryParams["block_id"] = id.String()
-
-	res, err := cc.apiClient.request(ctx, http.MethodGet, "comments", queryParams, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if errClose := res.Body.Close(); errClose != nil {
-			log.Println("failed to close body, should never happen")
-		}
-	}()
-
-	var response CommentQueryResponse
-
-	err = json.NewDecoder(res.Body).Decode(&response)
-	if err != nil {
-		return nil, err
-	}
-
-	return &response, nil
+	return doRequest[CommentQueryResponse](cc.apiClient, ctx, http.MethodGet, "comments", queryParams, nil)
 }
 
 type DiscussionID string

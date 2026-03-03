@@ -2,9 +2,7 @@ package notionapi
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 )
@@ -41,18 +39,7 @@ type PageClient struct {
 //
 // See https://developers.notion.com/reference/post-page
 func (pc *PageClient) Create(ctx context.Context, requestBody *PageCreateRequest) (*Page, error) {
-	res, err := pc.apiClient.request(ctx, http.MethodPost, "pages", nil, requestBody)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if errClose := res.Body.Close(); errClose != nil {
-			log.Println("failed to close body, should never happen")
-		}
-	}()
-
-	return handlePageResponse(res)
+	return doRequest[Page](pc.apiClient, ctx, http.MethodPost, "pages", nil, requestBody)
 }
 
 // PageCreateRequest represents the request body for PageClient.Create.
@@ -84,18 +71,7 @@ type PageCreateRequest struct {
 //
 // See https://developers.notion.com/reference/get-page
 func (pc *PageClient) Get(ctx context.Context, id PageID) (*Page, error) {
-	res, err := pc.apiClient.request(ctx, http.MethodGet, fmt.Sprintf("pages/%s", id.String()), nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if errClose := res.Body.Close(); errClose != nil {
-			log.Println("failed to close body, should never happen")
-		}
-	}()
-
-	return handlePageResponse(res)
+	return doRequest[Page](pc.apiClient, ctx, http.MethodGet, fmt.Sprintf("pages/%s", id.String()), nil, nil)
 }
 
 // Updates the properties of a page in a database. The properties body param of
@@ -114,18 +90,7 @@ func (pc *PageClient) Get(ctx context.Context, id PageID) (*Page, error) {
 //
 // See https://developers.notion.com/reference/patch-page
 func (pc *PageClient) Update(ctx context.Context, id PageID, request *PageUpdateRequest) (*Page, error) {
-	res, err := pc.apiClient.request(ctx, http.MethodPatch, fmt.Sprintf("pages/%s", id.String()), nil, request)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if errClose := res.Body.Close(); errClose != nil {
-			log.Println("failed to close body, should never happen")
-		}
-	}()
-
-	return handlePageResponse(res)
+	return doRequest[Page](pc.apiClient, ctx, http.MethodPatch, fmt.Sprintf("pages/%s", id.String()), nil, request)
 }
 
 // PageUpdateRequest represents the request body for PageClient.Update.
@@ -184,12 +149,3 @@ type Parent struct {
 	Workspace    bool         `json:"workspace,omitempty"`
 }
 
-func handlePageResponse(res *http.Response) (*Page, error) {
-	var response Page
-	err := json.NewDecoder(res.Body).Decode(&response)
-	if err != nil {
-		return nil, err
-	}
-
-	return &response, nil
-}

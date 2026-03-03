@@ -17,7 +17,7 @@ type PropertyArray []Property
 
 func (arr *PropertyArray) UnmarshalJSON(data []byte) error {
 	var err error
-	mapArr := make([]map[string]interface{}, 0)
+	mapArr := make([]map[string]any, 0)
 	if err = json.Unmarshal(data, &mapArr); err != nil {
 		return err
 	}
@@ -410,7 +410,7 @@ func (p ButtonProperty) GetType() PropertyType {
 type Properties map[string]Property
 
 func (p *Properties) UnmarshalJSON(data []byte) error {
-	var raw map[string]interface{}
+	var raw map[string]any
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
 	}
@@ -423,11 +423,11 @@ func (p *Properties) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func parsePageProperties(raw map[string]interface{}) (map[string]Property, error) {
+func parsePageProperties(raw map[string]any) (map[string]Property, error) {
 	result := make(map[string]Property)
 	for k, v := range raw {
 		switch rawProperty := v.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			p, err := decodeProperty(rawProperty)
 			if err != nil {
 				return nil, err
@@ -450,60 +450,38 @@ func parsePageProperties(raw map[string]interface{}) (map[string]Property, error
 	return result, nil
 }
 
-func decodeProperty(raw map[string]interface{}) (Property, error) {
-	var p Property
-	switch PropertyType(raw["type"].(string)) {
-	case PropertyTypeTitle:
-		p = &TitleProperty{}
-	case PropertyTypeRichText:
-		p = &RichTextProperty{}
-	case PropertyTypeText:
-		p = &RichTextProperty{}
-	case PropertyTypeNumber:
-		p = &NumberProperty{}
-	case PropertyTypeSelect:
-		p = &SelectProperty{}
-	case PropertyTypeMultiSelect:
-		p = &MultiSelectProperty{}
-	case PropertyTypeDate:
-		p = &DateProperty{}
-	case PropertyTypeFormula:
-		p = &FormulaProperty{}
-	case PropertyTypeRelation:
-		p = &RelationProperty{}
-	case PropertyTypeRollup:
-		p = &RollupProperty{}
-	case PropertyTypePeople:
-		p = &PeopleProperty{}
-	case PropertyTypeFiles:
-		p = &FilesProperty{}
-	case PropertyTypeCheckbox:
-		p = &CheckboxProperty{}
-	case PropertyTypeURL:
-		p = &URLProperty{}
-	case PropertyTypeEmail:
-		p = &EmailProperty{}
-	case PropertyTypePhoneNumber:
-		p = &PhoneNumberProperty{}
-	case PropertyTypeCreatedTime:
-		p = &CreatedTimeProperty{}
-	case PropertyTypeCreatedBy:
-		p = &CreatedByProperty{}
-	case PropertyTypeLastEditedTime:
-		p = &LastEditedTimeProperty{}
-	case PropertyTypeLastEditedBy:
-		p = &LastEditedByProperty{}
-	case PropertyTypeStatus:
-		p = &StatusProperty{}
-	case PropertyTypeUniqueID:
-		p = &UniqueIDProperty{}
-	case PropertyTypeVerification:
-		p = &VerificationProperty{}
-	case PropertyTypeButton:
-		p = &ButtonProperty{}
-	default:
-		return nil, fmt.Errorf("unsupported property type: %s", raw["type"].(string))
-	}
+var propertyRegistry = map[PropertyType]func() Property{
+	PropertyTypeTitle:          func() Property { return &TitleProperty{} },
+	PropertyTypeRichText:       func() Property { return &RichTextProperty{} },
+	PropertyTypeText:           func() Property { return &RichTextProperty{} },
+	PropertyTypeNumber:         func() Property { return &NumberProperty{} },
+	PropertyTypeSelect:         func() Property { return &SelectProperty{} },
+	PropertyTypeMultiSelect:    func() Property { return &MultiSelectProperty{} },
+	PropertyTypeDate:           func() Property { return &DateProperty{} },
+	PropertyTypeFormula:        func() Property { return &FormulaProperty{} },
+	PropertyTypeRelation:       func() Property { return &RelationProperty{} },
+	PropertyTypeRollup:         func() Property { return &RollupProperty{} },
+	PropertyTypePeople:         func() Property { return &PeopleProperty{} },
+	PropertyTypeFiles:          func() Property { return &FilesProperty{} },
+	PropertyTypeCheckbox:       func() Property { return &CheckboxProperty{} },
+	PropertyTypeURL:            func() Property { return &URLProperty{} },
+	PropertyTypeEmail:          func() Property { return &EmailProperty{} },
+	PropertyTypePhoneNumber:    func() Property { return &PhoneNumberProperty{} },
+	PropertyTypeCreatedTime:    func() Property { return &CreatedTimeProperty{} },
+	PropertyTypeCreatedBy:      func() Property { return &CreatedByProperty{} },
+	PropertyTypeLastEditedTime: func() Property { return &LastEditedTimeProperty{} },
+	PropertyTypeLastEditedBy:   func() Property { return &LastEditedByProperty{} },
+	PropertyTypeStatus:         func() Property { return &StatusProperty{} },
+	PropertyTypeUniqueID:       func() Property { return &UniqueIDProperty{} },
+	PropertyTypeVerification:   func() Property { return &VerificationProperty{} },
+	PropertyTypeButton:         func() Property { return &ButtonProperty{} },
+}
 
-	return p, nil
+func decodeProperty(raw map[string]any) (Property, error) {
+	typeName := PropertyType(raw["type"].(string))
+	factory, ok := propertyRegistry[typeName]
+	if !ok {
+		return nil, fmt.Errorf("unsupported property type: %s", typeName)
+	}
+	return factory(), nil
 }

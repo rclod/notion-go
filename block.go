@@ -41,23 +41,7 @@ type BlockClient struct {
 //
 // See https://developers.notion.com/reference/patch-block-children
 func (bc *BlockClient) AppendChildren(ctx context.Context, id BlockID, requestBody *AppendBlockChildrenRequest) (*AppendBlockChildrenResponse, error) {
-	res, err := bc.apiClient.request(ctx, http.MethodPatch, fmt.Sprintf("blocks/%s/children", id.String()), nil, requestBody)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if errClose := res.Body.Close(); errClose != nil {
-			log.Println("failed to close body, should never happen")
-		}
-	}()
-
-	var response AppendBlockChildrenResponse
-	err = json.NewDecoder(res.Body).Decode(&response)
-	if err != nil {
-		return nil, err
-	}
-	return &response, nil
+	return doRequest[AppendBlockChildrenResponse](bc.apiClient, ctx, http.MethodPatch, fmt.Sprintf("blocks/%s/children", id.String()), nil, requestBody)
 }
 
 type AppendBlockChildrenRequest struct {
@@ -82,7 +66,7 @@ func (bc *BlockClient) Get(ctx context.Context, id BlockID) (Block, error) {
 		}
 	}()
 
-	var response map[string]interface{}
+	var response map[string]any
 	err = json.NewDecoder(res.Body).Decode(&response)
 	if err != nil {
 		return nil, err
@@ -96,24 +80,7 @@ func (bc *BlockClient) Get(ctx context.Context, id BlockID) (Block, error) {
 //
 // See https://developers.notion.com/reference/get-block-children
 func (bc *BlockClient) GetChildren(ctx context.Context, id BlockID, pagination *Pagination) (*GetChildrenResponse, error) {
-	res, err := bc.apiClient.request(ctx, http.MethodGet, fmt.Sprintf("blocks/%s/children", id.String()), pagination.ToQuery(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if errClose := res.Body.Close(); errClose != nil {
-			log.Println("failed to close body, should never happen")
-		}
-	}()
-
-	response := &GetChildrenResponse{}
-	err = json.NewDecoder(res.Body).Decode(response)
-	if err != nil {
-		return nil, err
-	}
-
-	return response, nil
+	return doRequest[GetChildrenResponse](bc.apiClient, ctx, http.MethodGet, fmt.Sprintf("blocks/%s/children", id.String()), pagination.ToQuery(), nil)
 }
 
 type GetChildrenResponse struct {
@@ -143,7 +110,7 @@ func (bc *BlockClient) Update(ctx context.Context, id BlockID, requestBody *Bloc
 		}
 	}()
 
-	var response map[string]interface{}
+	var response map[string]any
 	err = json.NewDecoder(res.Body).Decode(&response)
 	if err != nil {
 		return nil, err
@@ -193,7 +160,7 @@ func (bc *BlockClient) Delete(ctx context.Context, id BlockID) (Block, error) {
 		}
 	}()
 
-	var response map[string]interface{}
+	var response map[string]any
 	err = json.NewDecoder(res.Body).Decode(&response)
 	if err != nil {
 		return nil, err
@@ -225,7 +192,7 @@ type Blocks []Block
 
 func (b *Blocks) UnmarshalJSON(data []byte) error {
 	var err error
-	mapArr := make([]map[string]interface{}, 0)
+	mapArr := make([]map[string]any, 0)
 	if err = json.Unmarshal(data, &mapArr); err != nil {
 		return err
 	}
@@ -749,7 +716,7 @@ type AppendBlockChildrenResponse struct {
 
 type appendBlockResponse struct {
 	Object  ObjectType               `json:"object"`
-	Results []map[string]interface{} `json:"results"`
+	Results []map[string]any `json:"results"`
 }
 
 func (r *AppendBlockChildrenResponse) UnmarshalJSON(data []byte) error {
@@ -773,77 +740,49 @@ func (r *AppendBlockChildrenResponse) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func decodeBlock(raw map[string]interface{}) (Block, error) {
-	var b Block
-	switch BlockType(raw["type"].(string)) {
-	case BlockTypeParagraph:
-		b = &ParagraphBlock{}
-	case BlockTypeHeading1:
-		b = &Heading1Block{}
-	case BlockTypeHeading2:
-		b = &Heading2Block{}
-	case BlockTypeHeading3:
-		b = &Heading3Block{}
-	case BlockTypeCallout:
-		b = &CalloutBlock{}
-	case BlockTypeQuote:
-		b = &QuoteBlock{}
-	case BlockTypeBulletedListItem:
-		b = &BulletedListItemBlock{}
-	case BlockTypeNumberedListItem:
-		b = &NumberedListItemBlock{}
-	case BlockTypeToDo:
-		b = &ToDoBlock{}
-	case BlockTypeCode:
-		b = &CodeBlock{}
-	case BlockTypeToggle:
-		b = &ToggleBlock{}
-	case BlockTypeChildPage:
-		b = &ChildPageBlock{}
-	case BlockTypeEmbed:
-		b = &EmbedBlock{}
-	case BlockTypeImage:
-		b = &ImageBlock{}
-	case BlockTypeVideo:
-		b = &VideoBlock{}
-	case BlockTypeFile:
-		b = &FileBlock{}
-	case BlockTypePdf:
-		b = &PdfBlock{}
-	case BlockTypeBookmark:
-		b = &BookmarkBlock{}
-	case BlockTypeChildDatabase:
-		b = &ChildDatabaseBlock{}
-	case BlockTypeTableOfContents:
-		b = &TableOfContentsBlock{}
-	case BlockTypeDivider:
-		b = &DividerBlock{}
-	case BlockTypeEquation:
-		b = &EquationBlock{}
-	case BlockTypeBreadcrumb:
-		b = &BreadcrumbBlock{}
-	case BlockTypeColumn:
-		b = &ColumnBlock{}
-	case BlockTypeColumnList:
-		b = &ColumnListBlock{}
-	case BlockTypeLinkPreview:
-		b = &LinkPreviewBlock{}
-	case BlockTypeLinkToPage:
-		b = &LinkToPageBlock{}
-	case BlockTypeTemplate:
-		b = &TemplateBlock{}
-	case BlockTypeSyncedBlock:
-		b = &SyncedBlock{}
-	case BlockTypeTableBlock:
-		b = &TableBlock{}
-	case BlockTypeTableRowBlock:
-		b = &TableRowBlock{}
+var blockRegistry = map[BlockType]func() Block{
+	BlockTypeParagraph:        func() Block { return &ParagraphBlock{} },
+	BlockTypeHeading1:         func() Block { return &Heading1Block{} },
+	BlockTypeHeading2:         func() Block { return &Heading2Block{} },
+	BlockTypeHeading3:         func() Block { return &Heading3Block{} },
+	BlockTypeCallout:          func() Block { return &CalloutBlock{} },
+	BlockTypeQuote:            func() Block { return &QuoteBlock{} },
+	BlockTypeBulletedListItem: func() Block { return &BulletedListItemBlock{} },
+	BlockTypeNumberedListItem: func() Block { return &NumberedListItemBlock{} },
+	BlockTypeToDo:             func() Block { return &ToDoBlock{} },
+	BlockTypeCode:             func() Block { return &CodeBlock{} },
+	BlockTypeToggle:           func() Block { return &ToggleBlock{} },
+	BlockTypeChildPage:        func() Block { return &ChildPageBlock{} },
+	BlockTypeEmbed:            func() Block { return &EmbedBlock{} },
+	BlockTypeImage:            func() Block { return &ImageBlock{} },
+	BlockTypeVideo:            func() Block { return &VideoBlock{} },
+	BlockTypeFile:             func() Block { return &FileBlock{} },
+	BlockTypePdf:              func() Block { return &PdfBlock{} },
+	BlockTypeBookmark:         func() Block { return &BookmarkBlock{} },
+	BlockTypeChildDatabase:    func() Block { return &ChildDatabaseBlock{} },
+	BlockTypeTableOfContents:  func() Block { return &TableOfContentsBlock{} },
+	BlockTypeDivider:          func() Block { return &DividerBlock{} },
+	BlockTypeEquation:         func() Block { return &EquationBlock{} },
+	BlockTypeBreadcrumb:       func() Block { return &BreadcrumbBlock{} },
+	BlockTypeColumn:           func() Block { return &ColumnBlock{} },
+	BlockTypeColumnList:       func() Block { return &ColumnListBlock{} },
+	BlockTypeLinkPreview:      func() Block { return &LinkPreviewBlock{} },
+	BlockTypeLinkToPage:       func() Block { return &LinkToPageBlock{} },
+	BlockTypeTemplate:         func() Block { return &TemplateBlock{} },
+	BlockTypeSyncedBlock:      func() Block { return &SyncedBlock{} },
+	BlockTypeTableBlock:       func() Block { return &TableBlock{} },
+	BlockTypeTableRowBlock:    func() Block { return &TableRowBlock{} },
+	BlockTypeUnsupported:      func() Block { return &UnsupportedBlock{} },
+}
 
-	case BlockTypeUnsupported:
-		b = &UnsupportedBlock{}
-	default:
+func decodeBlock(raw map[string]any) (Block, error) {
+	typeName := BlockType(raw["type"].(string))
+	factory, ok := blockRegistry[typeName]
+	if !ok {
 		return &UnsupportedBlock{}, nil
 	}
+
+	b := factory()
 	j, err := json.Marshal(raw)
 	if err != nil {
 		return nil, err

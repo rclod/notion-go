@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 )
@@ -33,24 +32,7 @@ type DatabaseClient struct {
 //
 // See https://developers.notion.com/reference/create-a-database
 func (dc *DatabaseClient) Create(ctx context.Context, requestBody *DatabaseCreateRequest) (*Database, error) {
-	res, err := dc.apiClient.request(ctx, http.MethodPost, "databases", nil, requestBody)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if errClose := res.Body.Close(); errClose != nil {
-			log.Println("failed to close body, should never happen")
-		}
-	}()
-
-	var response Database
-	err = json.NewDecoder(res.Body).Decode(&response)
-	if err != nil {
-		return nil, err
-	}
-
-	return &response, nil
+	return doRequest[Database](dc.apiClient, ctx, http.MethodPost, "databases", nil, requestBody)
 }
 
 // InitialDataSource specifies the schema for the initial data source when
@@ -90,24 +72,7 @@ type DatabaseCreateRequest struct {
 //
 // See https://developers.notion.com/reference/post-database-query
 func (dc *DatabaseClient) Query(ctx context.Context, id DatabaseID, requestBody *DatabaseQueryRequest) (*DatabaseQueryResponse, error) {
-	res, err := dc.apiClient.request(ctx, http.MethodPost, fmt.Sprintf("databases/%s/query", id.String()), nil, requestBody)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if errClose := res.Body.Close(); errClose != nil {
-			log.Println("failed to close body, should never happen")
-		}
-	}()
-
-	var response DatabaseQueryResponse
-	err = json.NewDecoder(res.Body).Decode(&response)
-	if err != nil {
-		return nil, err
-	}
-
-	return &response, nil
+	return doRequest[DatabaseQueryResponse](dc.apiClient, ctx, http.MethodPost, fmt.Sprintf("databases/%s/query", id.String()), nil, requestBody)
 }
 
 // DatabaseQueryRequest represents the request body for DatabaseClient.Query.
@@ -129,46 +94,12 @@ func (dc *DatabaseClient) Get(ctx context.Context, id DatabaseID) (*Database, er
 	if id == "" {
 		return nil, errors.New("empty database id")
 	}
-
-	res, err := dc.apiClient.request(ctx, http.MethodGet, fmt.Sprintf("databases/%s", id.String()), nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if errClose := res.Body.Close(); errClose != nil {
-			log.Println("failed to close body, should never happen")
-		}
-	}()
-
-	var response Database
-
-	err = json.NewDecoder(res.Body).Decode(&response)
-	if err != nil {
-		return nil, err
-	}
-
-	return &response, nil
+	return doRequest[Database](dc.apiClient, ctx, http.MethodGet, fmt.Sprintf("databases/%s", id.String()), nil, nil)
 }
 
 // Update https://developers.notion.com/reference/update-a-database
 func (dc *DatabaseClient) Update(ctx context.Context, id DatabaseID, requestBody *DatabaseUpdateRequest) (*Database, error) {
-	res, err := dc.apiClient.request(ctx, http.MethodPatch, fmt.Sprintf("databases/%s", id.String()), nil, requestBody)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if errClose := res.Body.Close(); errClose != nil {
-			log.Println("failed to close body, should never happen")
-		}
-	}()
-
-	var response Database
-	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
-		return nil, err
-	}
-	return &response, nil
+	return doRequest[Database](dc.apiClient, ctx, http.MethodPatch, fmt.Sprintf("databases/%s", id.String()), nil, requestBody)
 }
 
 // DatabaseUpdateRequest represents the request body for DatabaseClient.Update.
@@ -230,7 +161,7 @@ func (qr *DatabaseQueryRequest) MarshalJSON() ([]byte, error) {
 		Sorts       []SortObject `json:"sorts,omitempty"`
 		StartCursor Cursor       `json:"start_cursor,omitempty"`
 		PageSize    int          `json:"page_size,omitempty"`
-		Filter      interface{}  `json:"filter,omitempty"`
+		Filter      any  `json:"filter,omitempty"`
 	}{
 		Sorts:       qr.Sorts,
 		StartCursor: qr.StartCursor,

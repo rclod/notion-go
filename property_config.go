@@ -397,7 +397,7 @@ func (p ButtonPropertyConfig) GetID() PropertyID {
 type PropertyConfigs map[string]PropertyConfig
 
 func (p *PropertyConfigs) UnmarshalJSON(data []byte) error {
-	var raw map[string]interface{}
+	var raw map[string]any
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
 	}
@@ -410,76 +410,56 @@ func (p *PropertyConfigs) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func parsePropertyConfigs(raw map[string]interface{}) (PropertyConfigs, error) {
+var propertyConfigRegistry = map[PropertyConfigType]func() PropertyConfig{
+	PropertyConfigTypeTitle:       func() PropertyConfig { return &TitlePropertyConfig{} },
+	PropertyConfigTypeRichText:    func() PropertyConfig { return &RichTextPropertyConfig{} },
+	PropertyConfigTypeNumber:      func() PropertyConfig { return &NumberPropertyConfig{} },
+	PropertyConfigTypeSelect:      func() PropertyConfig { return &SelectPropertyConfig{} },
+	PropertyConfigTypeMultiSelect: func() PropertyConfig { return &MultiSelectPropertyConfig{} },
+	PropertyConfigTypeDate:        func() PropertyConfig { return &DatePropertyConfig{} },
+	PropertyConfigTypePeople:      func() PropertyConfig { return &PeoplePropertyConfig{} },
+	PropertyConfigTypeFiles:       func() PropertyConfig { return &FilesPropertyConfig{} },
+	PropertyConfigTypeCheckbox:    func() PropertyConfig { return &CheckboxPropertyConfig{} },
+	PropertyConfigTypeURL:         func() PropertyConfig { return &URLPropertyConfig{} },
+	PropertyConfigTypeEmail:       func() PropertyConfig { return &EmailPropertyConfig{} },
+	PropertyConfigTypePhoneNumber: func() PropertyConfig { return &PhoneNumberPropertyConfig{} },
+	PropertyConfigTypeFormula:     func() PropertyConfig { return &FormulaPropertyConfig{} },
+	PropertyConfigTypeRelation:    func() PropertyConfig { return &RelationPropertyConfig{} },
+	PropertyConfigTypeRollup:      func() PropertyConfig { return &RollupPropertyConfig{} },
+	PropertyConfigCreatedTime:     func() PropertyConfig { return &CreatedTimePropertyConfig{} },
+	PropertyConfigCreatedBy:       func() PropertyConfig { return &CreatedByPropertyConfig{} },
+	PropertyConfigLastEditedTime:  func() PropertyConfig { return &LastEditedTimePropertyConfig{} },
+	PropertyConfigLastEditedBy:    func() PropertyConfig { return &LastEditedByPropertyConfig{} },
+	PropertyConfigStatus:          func() PropertyConfig { return &StatusPropertyConfig{} },
+	PropertyConfigUniqueID:        func() PropertyConfig { return &UniqueIDPropertyConfig{} },
+	PropertyConfigVerification:    func() PropertyConfig { return &VerificationPropertyConfig{} },
+	PropertyConfigButton:          func() PropertyConfig { return &ButtonPropertyConfig{} },
+}
+
+func parsePropertyConfigs(raw map[string]any) (PropertyConfigs, error) {
 	result := make(PropertyConfigs)
 	for k, v := range raw {
-		var p PropertyConfig
-		switch rawProperty := v.(type) {
-		case map[string]interface{}:
-			switch PropertyConfigType(rawProperty["type"].(string)) {
-			case PropertyConfigTypeTitle:
-				p = &TitlePropertyConfig{}
-			case PropertyConfigTypeRichText:
-				p = &RichTextPropertyConfig{}
-			case PropertyConfigTypeNumber:
-				p = &NumberPropertyConfig{}
-			case PropertyConfigTypeSelect:
-				p = &SelectPropertyConfig{}
-			case PropertyConfigTypeMultiSelect:
-				p = &MultiSelectPropertyConfig{}
-			case PropertyConfigTypeDate:
-				p = &DatePropertyConfig{}
-			case PropertyConfigTypePeople:
-				p = &PeoplePropertyConfig{}
-			case PropertyConfigTypeFiles:
-				p = &FilesPropertyConfig{}
-			case PropertyConfigTypeCheckbox:
-				p = &CheckboxPropertyConfig{}
-			case PropertyConfigTypeURL:
-				p = &URLPropertyConfig{}
-			case PropertyConfigTypeEmail:
-				p = &EmailPropertyConfig{}
-			case PropertyConfigTypePhoneNumber:
-				p = &PhoneNumberPropertyConfig{}
-			case PropertyConfigTypeFormula:
-				p = &FormulaPropertyConfig{}
-			case PropertyConfigTypeRelation:
-				p = &RelationPropertyConfig{}
-			case PropertyConfigTypeRollup:
-				p = &RollupPropertyConfig{}
-			case PropertyConfigCreatedTime:
-				p = &CreatedTimePropertyConfig{}
-			case PropertyConfigCreatedBy:
-				p = &CreatedTimePropertyConfig{}
-			case PropertyConfigLastEditedTime:
-				p = &LastEditedTimePropertyConfig{}
-			case PropertyConfigLastEditedBy:
-				p = &LastEditedByPropertyConfig{}
-			case PropertyConfigStatus:
-				p = &StatusPropertyConfig{}
-			case PropertyConfigUniqueID:
-				p = &UniqueIDPropertyConfig{}
-			case PropertyConfigVerification:
-				p = &VerificationPropertyConfig{}
-			case PropertyConfigButton:
-				p = &ButtonPropertyConfig{}
-			default:
-
-				return nil, fmt.Errorf("unsupported property type: %s", rawProperty["type"].(string))
-			}
-			b, err := json.Marshal(rawProperty)
-			if err != nil {
-				return nil, err
-			}
-
-			if err = json.Unmarshal(b, &p); err != nil {
-				return nil, err
-			}
-
-			result[k] = p
-		default:
+		rawProperty, ok := v.(map[string]any)
+		if !ok {
 			return nil, fmt.Errorf("unsupported property format %T", v)
 		}
+
+		typeName := PropertyConfigType(rawProperty["type"].(string))
+		factory, ok := propertyConfigRegistry[typeName]
+		if !ok {
+			return nil, fmt.Errorf("unsupported property type: %s", typeName)
+		}
+
+		p := factory()
+		b, err := json.Marshal(rawProperty)
+		if err != nil {
+			return nil, err
+		}
+		if err = json.Unmarshal(b, &p); err != nil {
+			return nil, err
+		}
+
+		result[k] = p
 	}
 
 	return result, nil

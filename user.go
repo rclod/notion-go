@@ -2,9 +2,7 @@ package notionapi
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -29,48 +27,14 @@ type UserClient struct {
 //
 // See https://developers.notion.com/reference/get-users
 func (uc *UserClient) List(ctx context.Context, pagination *Pagination) (*UsersListResponse, error) {
-	res, err := uc.apiClient.request(ctx, http.MethodGet, "users", pagination.ToQuery(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if errClose := res.Body.Close(); errClose != nil {
-			log.Println("failed to close body, should never happen")
-		}
-	}()
-
-	var response UsersListResponse
-	err = json.NewDecoder(res.Body).Decode(&response)
-	if err != nil {
-		return nil, err
-	}
-
-	return &response, nil
+	return doRequest[UsersListResponse](uc.apiClient, ctx, http.MethodGet, "users", pagination.ToQuery(), nil)
 }
 
 // Retrieves a User using the ID specified.
 //
 // See https://developers.notion.com/reference/get-user
 func (uc *UserClient) Get(ctx context.Context, id UserID) (*User, error) {
-	res, err := uc.apiClient.request(ctx, http.MethodGet, fmt.Sprintf("users/%s", id.String()), nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if errClose := res.Body.Close(); errClose != nil {
-			log.Println("failed to close body, should never happen")
-		}
-	}()
-
-	var response User
-	err = json.NewDecoder(res.Body).Decode(&response)
-	if err != nil {
-		return nil, err
-	}
-
-	return &response, nil
+	return doRequest[User](uc.apiClient, ctx, http.MethodGet, fmt.Sprintf("users/%s", id.String()), nil, nil)
 }
 
 // Retrieves the bot User associated with the API token provided in the
@@ -79,24 +43,7 @@ func (uc *UserClient) Get(ctx context.Context, id UserID) (*User, error) {
 //
 // See https://developers.notion.com/reference/get-self
 func (uc *UserClient) Me(ctx context.Context) (*User, error) {
-	res, err := uc.apiClient.request(ctx, http.MethodGet, "users/me", nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if errClose := res.Body.Close(); errClose != nil {
-			log.Println("failed to close body, should never happen")
-		}
-	}()
-
-	var response User
-	err = json.NewDecoder(res.Body).Decode(&response)
-	if err != nil {
-		return nil, err
-	}
-
-	return &response, nil
+	return doRequest[User](uc.apiClient, ctx, http.MethodGet, "users/me", nil, nil)
 }
 
 type UserType string
