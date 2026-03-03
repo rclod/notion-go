@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/jomei/notionapi"
+	"github.com/rclod/notion-go"
 )
 
 // RoundTripFunc .

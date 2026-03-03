@@ -59,6 +59,50 @@ Notion-Version: {{api_version}}
   }
 }
 
+### Data Source
+# Get
+GET https://api.notion.com/v1/data_sources/{{data_source_id}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+Notion-Version: {{api_version}}
+
+###
+# Update
+PATCH https://api.notion.com/v1/data_sources/{{data_source_id}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+Notion-Version: {{api_version}}
+
+{
+  "properties": {
+    "Status": {
+      "type": "select",
+      "select": {
+        "options": [
+          {"name": "To Do", "color": "red"},
+          {"name": "Done", "color": "green"}
+        ]
+      }
+    }
+  }
+}
+
+###
+# Query
+POST https://api.notion.com/v1/data_sources/{{data_source_id}}/query
+Content-Type: application/json
+Authorization: Bearer {{token}}
+Notion-Version: {{api_version}}
+
+{
+  "filter": {
+    "property": "Status",
+    "select": {
+      "equals": "Done"
+    }
+  }
+}
+
 ### Page
 # Get
 GET https://api.notion.com/v1/pages/{{page_id}}

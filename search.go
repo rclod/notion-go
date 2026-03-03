@@ -97,6 +97,8 @@ func (sr *SearchResponse) UnmarshalJSON(data []byte) error {
 			o = &Database{}
 		case ObjectTypePage.String():
 			o = &Page{}
+		case ObjectTypeDataSource.String():
+			o = &DataSource{}
 		default:
 			return fmt.Errorf("unsupported object type %s", rawObject.(map[string]interface{})["object"].(string))
 		}

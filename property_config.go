@@ -53,7 +53,7 @@ func (ft FormatType) String() string {
 }
 
 type NumberFormat struct {
-	Format FormatType `json:"format"`
+	Format FormatType `json:"format,omitempty"`
 }
 
 func (p NumberPropertyConfig) GetType() PropertyConfigType {
@@ -323,7 +323,7 @@ func (p LastEditedByPropertyConfig) GetID() PropertyID {
 }
 
 type StatusPropertyConfig struct {
-	ID     PropertyID         `json:"id"`
+	ID     PropertyID         `json:"id,omitempty"`
 	Type   PropertyConfigType `json:"type"`
 	Status StatusConfig       `json:"status"`
 }
@@ -337,8 +337,8 @@ func (p StatusPropertyConfig) GetID() PropertyID {
 }
 
 type StatusConfig struct {
-	Options []Option      `json:"options"`
-	Groups  []GroupConfig `json:"groups"`
+	Options []Option      `json:"options,omitempty"`
+	Groups  []GroupConfig `json:"groups,omitempty"`
 }
 
 type GroupConfig struct {

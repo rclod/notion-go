@@ -1,3 +1,3 @@
-module github.com/jomei/notionapi
+module github.com/rclod/notion-go
 
-go 1.14
+go 1.22

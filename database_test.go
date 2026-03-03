@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jomei/notionapi"
+	"github.com/rclod/notion-go"
 )
 
 func TestDatabaseClient(t *testing.T) {

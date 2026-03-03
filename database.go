@@ -53,6 +53,12 @@ func (dc *DatabaseClient) Create(ctx context.Context, requestBody *DatabaseCreat
 	return &response, nil
 }
 
+// InitialDataSource specifies the schema for the initial data source when
+// creating a database in API v2025-09-03+.
+type InitialDataSource struct {
+	Properties PropertyConfigs `json:"properties,omitempty"`
+}
+
 // DatabaseCreateRequest represents the request body for DatabaseClient.Create.
 type DatabaseCreateRequest struct {
 	// A page parent.
@@ -61,8 +67,10 @@ type DatabaseCreateRequest struct {
 	Title []RichText `json:"title"`
 	// Property schema of database. The keys are the names of properties as they
 	// appear in Notion and the values are property schema objects.
-	Properties PropertyConfigs `json:"properties"`
-	IsInline   bool            `json:"is_inline"`
+	Properties PropertyConfigs `json:"properties,omitempty"`
+	IsInline   bool            `json:"is_inline,omitempty"`
+	// InitialDataSource specifies the schema for the first data source (API v2025-09-03+).
+	InitialDataSource *InitialDataSource `json:"initial_data_source,omitempty"`
 }
 
 // Gets a list of Pages contained in the database, filtered and ordered
@@ -177,6 +185,12 @@ type DatabaseUpdateRequest struct {
 	Properties PropertyConfigs `json:"properties,omitempty"`
 }
 
+// DataSourceRef is a reference to a data source within a database container.
+type DataSourceRef struct {
+	ID   string `json:"id"`
+	Name string `json:"name,omitempty"`
+}
+
 type Database struct {
 	Object         ObjectType `json:"object"`
 	ID             ObjectID   `json:"id"`
@@ -188,13 +202,16 @@ type Database struct {
 	Parent         Parent     `json:"parent"`
 	URL            string     `json:"url"`
 	PublicURL      string     `json:"public_url"`
-	// Properties is a map of property configurations that defines what Page.Properties each page of the database can use
-	Properties  PropertyConfigs `json:"properties"`
+	// Properties is a map of property configurations that defines what Page.Properties each page of the database can use.
+	// In API v2025-09-03, properties live on data sources; this field may be empty for container-level responses.
+	Properties  PropertyConfigs `json:"properties,omitempty"`
 	Description []RichText      `json:"description"`
 	IsInline    bool            `json:"is_inline"`
 	Archived    bool            `json:"archived"`
 	Icon        *Icon           `json:"icon,omitempty"`
 	Cover       *Image          `json:"cover,omitempty"`
+	// DataSources lists the data sources belonging to this database (API v2025-09-03+).
+	DataSources []DataSourceRef `json:"data_sources,omitempty"`
 }
 
 func (db *Database) GetObject() ObjectType {

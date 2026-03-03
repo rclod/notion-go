@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/jomei/notionapi"
+	"github.com/rclod/notion-go"
 )
 
 func TestAuthenticationClient(t *testing.T) {

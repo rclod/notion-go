@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jomei/notionapi"
+	"github.com/rclod/notion-go"
 )
 
 func TestCommentClient(t *testing.T) {

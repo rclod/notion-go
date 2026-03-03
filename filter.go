@@ -64,8 +64,8 @@ type PropertyFilter struct {
 func (f PropertyFilter) filter() {}
 
 type SearchFilter struct {
-	Value    string `json:"value"`
-	Property string `json:"property"`
+	Value    string `json:"value,omitempty"`
+	Property string `json:"property,omitempty"`
 }
 
 type TextFilterCondition struct {
