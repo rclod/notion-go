@@ -253,6 +253,140 @@ func TestPageClient(t *testing.T) {
 		}
 	})
 
+	t.Run("Move", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			filePath   string
+			statusCode int
+			id         notionapi.PageID
+			request    *notionapi.PageMoveRequest
+			wantErr    bool
+		}{
+			{
+				name:       "moves a page to a new parent",
+				id:         "page_moved_id",
+				filePath:   "testdata/page_move.json",
+				statusCode: http.StatusOK,
+				request: &notionapi.PageMoveRequest{
+					Parent: notionapi.Parent{
+						Type:   notionapi.ParentTypePageID,
+						PageID: "new_parent_page_id",
+					},
+				},
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				c := newMockedClient(t, tt.filePath, tt.statusCode)
+				client := notionapi.NewClient("some_token", notionapi.WithHTTPClient(c))
+
+				got, err := client.Page.Move(context.Background(), tt.id, tt.request)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("Move() error = %v, wantErr %v", err, tt.wantErr)
+					return
+				}
+
+				if got.Parent.Type != notionapi.ParentTypePageID {
+					t.Errorf("Move() parent.type = %v, want %v", got.Parent.Type, notionapi.ParentTypePageID)
+				}
+				if got.Parent.PageID != "new_parent_page_id" {
+					t.Errorf("Move() parent.page_id = %v, want new_parent_page_id", got.Parent.PageID)
+				}
+			})
+		}
+	})
+
+	t.Run("GetMarkdown", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			filePath   string
+			statusCode int
+			id         notionapi.PageID
+			wantErr    bool
+		}{
+			{
+				name:       "returns page markdown",
+				id:         "page_md_id",
+				filePath:   "testdata/page_markdown_get.json",
+				statusCode: http.StatusOK,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				c := newMockedClient(t, tt.filePath, tt.statusCode)
+				client := notionapi.NewClient("some_token", notionapi.WithHTTPClient(c))
+
+				got, err := client.Page.GetMarkdown(context.Background(), tt.id)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("GetMarkdown() error = %v, wantErr %v", err, tt.wantErr)
+					return
+				}
+
+				if got.Object != notionapi.ObjectTypePageMarkdown {
+					t.Errorf("GetMarkdown() object = %v, want %v", got.Object, notionapi.ObjectTypePageMarkdown)
+				}
+				if string(got.ID) != "page_md_id" {
+					t.Errorf("GetMarkdown() id = %v, want page_md_id", got.ID)
+				}
+				if got.Markdown == "" {
+					t.Error("GetMarkdown() markdown is empty")
+				}
+				if got.Truncated {
+					t.Error("GetMarkdown() truncated = true, want false")
+				}
+				if len(got.UnknownBlockIDs) != 0 {
+					t.Errorf("GetMarkdown() unknown_block_ids = %v, want empty", got.UnknownBlockIDs)
+				}
+			})
+		}
+	})
+
+	t.Run("UpdateMarkdown", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			filePath   string
+			statusCode int
+			id         notionapi.PageID
+			request    *notionapi.MarkdownUpdateRequest
+			wantErr    bool
+		}{
+			{
+				name:       "updates page markdown",
+				id:         "page_md_id",
+				filePath:   "testdata/page_markdown_update.json",
+				statusCode: http.StatusOK,
+				request: &notionapi.MarkdownUpdateRequest{
+					Type: "insert_content",
+					InsertContent: &notionapi.InsertContent{
+						Content: "- Item 3\n",
+					},
+				},
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				c := newMockedClient(t, tt.filePath, tt.statusCode)
+				client := notionapi.NewClient("some_token", notionapi.WithHTTPClient(c))
+
+				got, err := client.Page.UpdateMarkdown(context.Background(), tt.id, tt.request)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("UpdateMarkdown() error = %v, wantErr %v", err, tt.wantErr)
+					return
+				}
+
+				if got.Object != notionapi.ObjectTypePageMarkdown {
+					t.Errorf("UpdateMarkdown() object = %v, want %v", got.Object, notionapi.ObjectTypePageMarkdown)
+				}
+				if len(got.UnknownBlockIDs) != 1 {
+					t.Errorf("UpdateMarkdown() unknown_block_ids = %v, want 1 element", got.UnknownBlockIDs)
+				}
+			})
+		}
+	})
+
 	t.Run("Update", func(t *testing.T) {
 		tests := []struct {
 			name       string

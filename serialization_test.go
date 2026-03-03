@@ -405,6 +405,382 @@ func TestDataSourceUpdateRequest_Marshal(t *testing.T) {
 	})
 }
 
+func TestPageCreateRequest_TemplateFields(t *testing.T) {
+	t.Run("with template", func(t *testing.T) {
+		req := PageCreateRequest{
+			Parent:     Parent{Type: ParentTypeDataSourceID, DataSourceID: "ds_id"},
+			Properties: Properties{},
+			Template: &PageTemplate{
+				Type:       TemplateTypeTemplateID,
+				TemplateID: "tmpl_123",
+			},
+		}
+		b, err := json.Marshal(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := string(b)
+		if !strings.Contains(s, `"template"`) {
+			t.Errorf("expected template to be present, got %s", s)
+		}
+		if !strings.Contains(s, `"template_id":"tmpl_123"`) {
+			t.Errorf("expected template_id to be present, got %s", s)
+		}
+	})
+
+	t.Run("with markdown", func(t *testing.T) {
+		req := PageCreateRequest{
+			Parent:     Parent{Type: ParentTypeDataSourceID, DataSourceID: "ds_id"},
+			Properties: Properties{},
+			Markdown:   "# Hello\n\nWorld",
+		}
+		b, err := json.Marshal(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := string(b)
+		if !strings.Contains(s, `"markdown":"# Hello\n\nWorld"`) {
+			t.Errorf("expected markdown to be present, got %s", s)
+		}
+	})
+
+	t.Run("with position", func(t *testing.T) {
+		req := PageCreateRequest{
+			Parent:     Parent{Type: ParentTypeDataSourceID, DataSourceID: "ds_id"},
+			Properties: Properties{},
+			Position: &PagePosition{
+				Type:       PositionTypeAfterBlock,
+				AfterBlock: &AfterBlockRef{ID: "block_abc"},
+			},
+		}
+		b, err := json.Marshal(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := string(b)
+		if !strings.Contains(s, `"position"`) {
+			t.Errorf("expected position to be present, got %s", s)
+		}
+		if !strings.Contains(s, `"after_block"`) {
+			t.Errorf("expected after_block to be present, got %s", s)
+		}
+	})
+
+	t.Run("omits optional fields when nil", func(t *testing.T) {
+		req := PageCreateRequest{
+			Parent:     Parent{Type: ParentTypeDataSourceID, DataSourceID: "ds_id"},
+			Properties: Properties{},
+		}
+		b, err := json.Marshal(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := string(b)
+		if strings.Contains(s, `"template"`) {
+			t.Errorf("expected template to be omitted, got %s", s)
+		}
+		if strings.Contains(s, `"markdown"`) {
+			t.Errorf("expected markdown to be omitted, got %s", s)
+		}
+		if strings.Contains(s, `"position"`) {
+			t.Errorf("expected position to be omitted, got %s", s)
+		}
+	})
+}
+
+func TestPageUpdateRequest_NewFields(t *testing.T) {
+	t.Run("with template and erase_content", func(t *testing.T) {
+		eraseContent := true
+		req := PageUpdateRequest{
+			Template: &PageTemplate{
+				Type: TemplateTypeDefault,
+			},
+			EraseContent: &eraseContent,
+		}
+		b, err := json.Marshal(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := string(b)
+		if !strings.Contains(s, `"template"`) {
+			t.Errorf("expected template to be present, got %s", s)
+		}
+		if !strings.Contains(s, `"erase_content":true`) {
+			t.Errorf("expected erase_content to be present, got %s", s)
+		}
+	})
+
+	t.Run("with is_locked and in_trash", func(t *testing.T) {
+		isLocked := true
+		inTrash := false
+		req := PageUpdateRequest{
+			IsLocked: &isLocked,
+			InTrash:  &inTrash,
+		}
+		b, err := json.Marshal(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := string(b)
+		if !strings.Contains(s, `"is_locked":true`) {
+			t.Errorf("expected is_locked to be present, got %s", s)
+		}
+		if !strings.Contains(s, `"in_trash":false`) {
+			t.Errorf("expected in_trash to be present, got %s", s)
+		}
+	})
+
+	t.Run("omits optional fields when nil", func(t *testing.T) {
+		req := PageUpdateRequest{}
+		b, err := json.Marshal(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := string(b)
+		if strings.Contains(s, `"template"`) {
+			t.Errorf("expected template to be omitted, got %s", s)
+		}
+		if strings.Contains(s, `"erase_content"`) {
+			t.Errorf("expected erase_content to be omitted, got %s", s)
+		}
+		if strings.Contains(s, `"is_locked"`) {
+			t.Errorf("expected is_locked to be omitted, got %s", s)
+		}
+		if strings.Contains(s, `"in_trash"`) {
+			t.Errorf("expected in_trash to be omitted, got %s", s)
+		}
+	})
+}
+
+func TestDataSourceCreateRequest_Marshal(t *testing.T) {
+	t.Run("required and optional fields", func(t *testing.T) {
+		req := DataSourceCreateRequest{
+			Parent: Parent{Type: ParentTypeDatabaseID, DatabaseID: "db_id"},
+			Properties: PropertyConfigs{
+				"Name": TitlePropertyConfig{Type: PropertyConfigTypeTitle},
+			},
+			Title: []RichText{{Type: RichTextTypeText, Text: &Text{Content: "Source"}}},
+		}
+		b, err := json.Marshal(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := string(b)
+		if !strings.Contains(s, `"parent"`) {
+			t.Errorf("expected parent to be present, got %s", s)
+		}
+		if !strings.Contains(s, `"properties"`) {
+			t.Errorf("expected properties to be present, got %s", s)
+		}
+		if !strings.Contains(s, `"title"`) {
+			t.Errorf("expected title to be present, got %s", s)
+		}
+	})
+
+	t.Run("omits optional fields when empty", func(t *testing.T) {
+		req := DataSourceCreateRequest{
+			Parent:     Parent{Type: ParentTypeDatabaseID, DatabaseID: "db_id"},
+			Properties: PropertyConfigs{},
+		}
+		b, err := json.Marshal(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := string(b)
+		if strings.Contains(s, `"icon"`) {
+			t.Errorf("expected icon to be omitted, got %s", s)
+		}
+	})
+}
+
+func TestTemplateListResponse_Unmarshal(t *testing.T) {
+	data := `{
+		"templates": [
+			{"id": "t1", "name": "Template A", "is_default": true},
+			{"id": "t2", "name": "Template B", "is_default": false}
+		],
+		"has_more": true,
+		"next_cursor": "cursor_abc"
+	}`
+	var resp TemplateListResponse
+	if err := json.Unmarshal([]byte(data), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.Templates) != 2 {
+		t.Fatalf("expected 2 templates, got %d", len(resp.Templates))
+	}
+	if resp.Templates[0].ID != "t1" || resp.Templates[0].Name != "Template A" || !resp.Templates[0].IsDefault {
+		t.Errorf("templates[0] = %+v", resp.Templates[0])
+	}
+	if resp.Templates[1].ID != "t2" || resp.Templates[1].IsDefault {
+		t.Errorf("templates[1] = %+v", resp.Templates[1])
+	}
+	if !resp.HasMore {
+		t.Error("expected has_more = true")
+	}
+	if resp.NextCursor != "cursor_abc" {
+		t.Errorf("next_cursor = %v, want cursor_abc", resp.NextCursor)
+	}
+}
+
+func TestPageMarkdown_Unmarshal(t *testing.T) {
+	data := `{
+		"object": "page_markdown",
+		"id": "page_id",
+		"markdown": "# Title\n\nContent here.",
+		"truncated": true,
+		"unknown_block_ids": ["blk_1", "blk_2"]
+	}`
+	var pm PageMarkdown
+	if err := json.Unmarshal([]byte(data), &pm); err != nil {
+		t.Fatal(err)
+	}
+	if pm.Object != ObjectTypePageMarkdown {
+		t.Errorf("object = %v, want page_markdown", pm.Object)
+	}
+	if string(pm.ID) != "page_id" {
+		t.Errorf("id = %v, want page_id", pm.ID)
+	}
+	if pm.Markdown != "# Title\n\nContent here." {
+		t.Errorf("markdown = %v", pm.Markdown)
+	}
+	if !pm.Truncated {
+		t.Error("expected truncated = true")
+	}
+	if len(pm.UnknownBlockIDs) != 2 {
+		t.Fatalf("expected 2 unknown_block_ids, got %d", len(pm.UnknownBlockIDs))
+	}
+}
+
+func TestMarkdownUpdateRequest_Marshal(t *testing.T) {
+	t.Run("insert_content", func(t *testing.T) {
+		req := MarkdownUpdateRequest{
+			Type: "insert_content",
+			InsertContent: &InsertContent{
+				Content: "## New section\n",
+				After:   "block_abc",
+			},
+		}
+		b, err := json.Marshal(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := string(b)
+		if !strings.Contains(s, `"type":"insert_content"`) {
+			t.Errorf("expected type to be insert_content, got %s", s)
+		}
+		if !strings.Contains(s, `"insert_content"`) {
+			t.Errorf("expected insert_content object, got %s", s)
+		}
+		if strings.Contains(s, `"replace_content_range"`) {
+			t.Errorf("expected replace_content_range to be omitted, got %s", s)
+		}
+	})
+
+	t.Run("replace_content_range", func(t *testing.T) {
+		req := MarkdownUpdateRequest{
+			Type: "replace_content_range",
+			ReplaceContentRange: &ReplaceContentRange{
+				Content:              "Updated content",
+				ContentRange:         "## Old heading\nOld text",
+				AllowDeletingContent: true,
+			},
+		}
+		b, err := json.Marshal(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := string(b)
+		if !strings.Contains(s, `"type":"replace_content_range"`) {
+			t.Errorf("expected type to be replace_content_range, got %s", s)
+		}
+		if !strings.Contains(s, `"allow_deleting_content":true`) {
+			t.Errorf("expected allow_deleting_content, got %s", s)
+		}
+		if strings.Contains(s, `"insert_content"`) {
+			t.Errorf("expected insert_content to be omitted, got %s", s)
+		}
+	})
+}
+
+func TestPageMoveRequest_Marshal(t *testing.T) {
+	req := PageMoveRequest{
+		Parent: Parent{
+			Type:   ParentTypePageID,
+			PageID: "new_parent",
+		},
+	}
+	b, err := json.Marshal(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(b)
+	if !strings.Contains(s, `"page_id":"new_parent"`) {
+		t.Errorf("expected page_id to be present, got %s", s)
+	}
+}
+
+func TestDataSource_FullUnmarshal(t *testing.T) {
+	data := `{
+		"object": "data_source",
+		"id": "ds_full",
+		"title": [{"type":"text","text":{"content":"Full"},"plain_text":"Full"}],
+		"properties": {"Name":{"id":"title","type":"title","title":{}}},
+		"parent": {"type":"database_id","database_id":"db_parent"},
+		"database_parent": {"type":"database_id","database_id":"db_container"},
+		"is_inline": true,
+		"archived": false,
+		"in_trash": true,
+		"created_time": "2024-01-15T10:00:00.000Z",
+		"last_edited_time": "2024-06-20T15:30:00.000Z",
+		"created_by": {"object":"user","id":"user_1"},
+		"last_edited_by": {"object":"user","id":"user_2"},
+		"url": "https://notion.so/ds_full",
+		"public_url": "https://notion.so/public/ds_full"
+	}`
+
+	var ds DataSource
+	if err := json.Unmarshal([]byte(data), &ds); err != nil {
+		t.Fatal(err)
+	}
+	if ds.Object != ObjectTypeDataSource {
+		t.Errorf("object = %v, want data_source", ds.Object)
+	}
+	if string(ds.ID) != "ds_full" {
+		t.Errorf("id = %v, want ds_full", ds.ID)
+	}
+	if ds.DatabaseParent.DatabaseID != "db_container" {
+		t.Errorf("database_parent.database_id = %v, want db_container", ds.DatabaseParent.DatabaseID)
+	}
+	if !ds.IsInline {
+		t.Error("expected is_inline = true")
+	}
+	if ds.Archived {
+		t.Error("expected archived = false")
+	}
+	if !ds.InTrash {
+		t.Error("expected in_trash = true")
+	}
+	if ds.CreatedTime.IsZero() {
+		t.Error("expected created_time to be set")
+	}
+	if ds.LastEditedTime.IsZero() {
+		t.Error("expected last_edited_time to be set")
+	}
+	if string(ds.CreatedBy.ID) != "user_1" {
+		t.Errorf("created_by.id = %v, want user_1", ds.CreatedBy.ID)
+	}
+	if string(ds.LastEditedBy.ID) != "user_2" {
+		t.Errorf("last_edited_by.id = %v, want user_2", ds.LastEditedBy.ID)
+	}
+	if ds.URL != "https://notion.so/ds_full" {
+		t.Errorf("url = %v", ds.URL)
+	}
+	if ds.PublicURL != "https://notion.so/public/ds_full" {
+		t.Errorf("public_url = %v", ds.PublicURL)
+	}
+}
+
 func TestNumberPropertyConfig_OmitsEmptyFormat(t *testing.T) {
 	// Creating a number property without specifying format should not send "format":""
 	p := NumberPropertyConfig{

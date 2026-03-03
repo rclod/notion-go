@@ -1,0 +1,16 @@
+{
+  "templates": [
+    {
+      "id": "tmpl_1",
+      "name": "Meeting Notes",
+      "is_default": true
+    },
+    {
+      "id": "tmpl_2",
+      "name": "Task",
+      "is_default": false
+    }
+  ],
+  "has_more": false,
+  "next_cursor": null
+}

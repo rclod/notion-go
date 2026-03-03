@@ -9,7 +9,8 @@ const (
 	ObjectTypeUser       ObjectType = "user"
 	ObjectTypeError      ObjectType = "error"
 	ObjectTypeComment    ObjectType = "comment"
-	ObjectTypeDataSource ObjectType = "data_source"
+	ObjectTypeDataSource   ObjectType = "data_source"
+	ObjectTypePageMarkdown ObjectType = "page_markdown"
 )
 
 const (

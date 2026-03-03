@@ -123,6 +123,113 @@ func TestDataSourceClient(t *testing.T) {
 		}
 	})
 
+	t.Run("Create", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			filePath   string
+			statusCode int
+			request    *notionapi.DataSourceCreateRequest
+			wantErr    bool
+		}{
+			{
+				name:       "creates a new data source",
+				filePath:   "testdata/data_source_create.json",
+				statusCode: http.StatusOK,
+				request: &notionapi.DataSourceCreateRequest{
+					Parent: notionapi.Parent{
+						Type:       notionapi.ParentTypeDatabaseID,
+						DatabaseID: "parent_db_id",
+					},
+					Properties: notionapi.PropertyConfigs{
+						"Name": notionapi.TitlePropertyConfig{
+							Type: notionapi.PropertyConfigTypeTitle,
+						},
+					},
+				},
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				c := newMockedClient(t, tt.filePath, tt.statusCode)
+				client := notionapi.NewClient("some_token", notionapi.WithHTTPClient(c))
+
+				got, err := client.DataSource.Create(context.Background(), tt.request)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("Create() error = %v, wantErr %v", err, tt.wantErr)
+					return
+				}
+
+				if got.Object != notionapi.ObjectTypeDataSource {
+					t.Errorf("Create() object = %v, want %v", got.Object, notionapi.ObjectTypeDataSource)
+				}
+				if string(got.ID) != "ds_new_id" {
+					t.Errorf("Create() id = %v, want ds_new_id", got.ID)
+				}
+				if got.Parent.DatabaseID != "parent_db_id" {
+					t.Errorf("Create() parent.database_id = %v, want parent_db_id", got.Parent.DatabaseID)
+				}
+				if _, ok := got.Properties["Name"]; !ok {
+					t.Error("Create() missing 'Name' property")
+				}
+				if got.URL != "https://www.notion.so/ds_new_id" {
+					t.Errorf("Create() url = %v, want https://www.notion.so/ds_new_id", got.URL)
+				}
+			})
+		}
+	})
+
+	t.Run("ListTemplates", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			filePath   string
+			statusCode int
+			id         notionapi.DataSourceID
+			pagination *notionapi.Pagination
+			wantErr    bool
+		}{
+			{
+				name:       "returns templates for a data source",
+				filePath:   "testdata/data_source_templates.json",
+				statusCode: http.StatusOK,
+				id:         "ds_some_id",
+				pagination: nil,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				c := newMockedClient(t, tt.filePath, tt.statusCode)
+				client := notionapi.NewClient("some_token", notionapi.WithHTTPClient(c))
+
+				got, err := client.DataSource.ListTemplates(context.Background(), tt.id, tt.pagination)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("ListTemplates() error = %v, wantErr %v", err, tt.wantErr)
+					return
+				}
+
+				if len(got.Templates) != 2 {
+					t.Fatalf("ListTemplates() got %d templates, want 2", len(got.Templates))
+				}
+				if got.Templates[0].ID != "tmpl_1" {
+					t.Errorf("ListTemplates() templates[0].id = %v, want tmpl_1", got.Templates[0].ID)
+				}
+				if got.Templates[0].Name != "Meeting Notes" {
+					t.Errorf("ListTemplates() templates[0].name = %v, want Meeting Notes", got.Templates[0].Name)
+				}
+				if !got.Templates[0].IsDefault {
+					t.Error("ListTemplates() templates[0].is_default = false, want true")
+				}
+				if got.Templates[1].IsDefault {
+					t.Error("ListTemplates() templates[1].is_default = true, want false")
+				}
+				if got.HasMore {
+					t.Error("ListTemplates() has_more = true, want false")
+				}
+			})
+		}
+	})
+
 	t.Run("Query", func(t *testing.T) {
 		tests := []struct {
 			name       string

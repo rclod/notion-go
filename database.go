@@ -114,6 +114,14 @@ type DatabaseUpdateRequest struct {
 	// property schema objects. If adding a new property, then the key is the name
 	// of the new database property and the value is a property schema object.
 	Properties PropertyConfigs `json:"properties,omitempty"`
+	// Whether the database is displayed inline.
+	IsInline *bool `json:"is_inline,omitempty"`
+	// The icon of the database.
+	Icon *Icon `json:"icon,omitempty"`
+	// The cover image of the database.
+	Cover *Image `json:"cover,omitempty"`
+	// Whether the database is in the trash.
+	InTrash *bool `json:"in_trash,omitempty"`
 }
 
 // DataSourceRef is a reference to a data source within a database container.
@@ -139,6 +147,7 @@ type Database struct {
 	Description []RichText      `json:"description"`
 	IsInline    bool            `json:"is_inline"`
 	Archived    bool            `json:"archived"`
+	InTrash     bool            `json:"in_trash,omitempty"`
 	Icon        *Icon           `json:"icon,omitempty"`
 	Cover       *Image          `json:"cover,omitempty"`
 	// DataSources lists the data sources belonging to this database (API v2025-09-03+).

@@ -17,6 +17,9 @@ type PageService interface {
 	Create(context.Context, *PageCreateRequest) (*Page, error)
 	Get(context.Context, PageID) (*Page, error)
 	Update(context.Context, PageID, *PageUpdateRequest) (*Page, error)
+	Move(context.Context, PageID, *PageMoveRequest) (*Page, error)
+	GetMarkdown(context.Context, PageID) (*PageMarkdown, error)
+	UpdateMarkdown(context.Context, PageID, *MarkdownUpdateRequest) (*PageMarkdown, error)
 }
 
 type PageClient struct {
@@ -42,6 +45,41 @@ func (pc *PageClient) Create(ctx context.Context, requestBody *PageCreateRequest
 	return doRequest[Page](pc.apiClient, ctx, http.MethodPost, "pages", nil, requestBody)
 }
 
+// TemplateType specifies how a page template should be applied.
+type TemplateType string
+
+const (
+	TemplateTypeNone       TemplateType = "none"
+	TemplateTypeDefault    TemplateType = "default"
+	TemplateTypeTemplateID TemplateType = "template_id"
+)
+
+// PageTemplate specifies a template to apply when creating or updating a page.
+type PageTemplate struct {
+	Type       TemplateType `json:"type"`
+	TemplateID string       `json:"template_id,omitempty"`
+}
+
+// PositionType specifies where a page should be positioned among siblings.
+type PositionType string
+
+const (
+	PositionTypeAfterBlock PositionType = "after_block"
+	PositionTypePageStart  PositionType = "page_start"
+	PositionTypePageEnd    PositionType = "page_end"
+)
+
+// PagePosition specifies the position of a new page among its siblings.
+type PagePosition struct {
+	Type       PositionType   `json:"type"`
+	AfterBlock *AfterBlockRef `json:"after_block,omitempty"`
+}
+
+// AfterBlockRef identifies a block after which a page should be positioned.
+type AfterBlockRef struct {
+	ID string `json:"id"`
+}
+
 // PageCreateRequest represents the request body for PageClient.Create.
 type PageCreateRequest struct {
 	// The parent page or database where the new page is inserted, represented as
@@ -58,6 +96,12 @@ type PageCreateRequest struct {
 	Icon *Icon `json:"icon,omitempty"`
 	// The cover image of the new page, represented as a file object.
 	Cover *Image `json:"cover,omitempty"`
+	// Template to apply to the new page.
+	Template *PageTemplate `json:"template,omitempty"`
+	// Markdown content for the page body (mutually exclusive with Children).
+	Markdown string `json:"markdown,omitempty"`
+	// Position of the new page among its siblings.
+	Position *PagePosition `json:"position,omitempty"`
 }
 
 // Retrieves a Page object using the ID specified.
@@ -93,6 +137,27 @@ func (pc *PageClient) Update(ctx context.Context, id PageID, request *PageUpdate
 	return doRequest[Page](pc.apiClient, ctx, http.MethodPatch, fmt.Sprintf("pages/%s", id.String()), nil, request)
 }
 
+// Move moves a page to a new parent.
+//
+// See https://developers.notion.com/reference/move-a-page
+func (pc *PageClient) Move(ctx context.Context, id PageID, request *PageMoveRequest) (*Page, error) {
+	return doRequest[Page](pc.apiClient, ctx, http.MethodPost, fmt.Sprintf("pages/%s/move", id.String()), nil, request)
+}
+
+// GetMarkdown retrieves a page's content as markdown.
+//
+// See https://developers.notion.com/reference/get-page-markdown
+func (pc *PageClient) GetMarkdown(ctx context.Context, id PageID) (*PageMarkdown, error) {
+	return doRequest[PageMarkdown](pc.apiClient, ctx, http.MethodGet, fmt.Sprintf("pages/%s/markdown", id.String()), nil, nil)
+}
+
+// UpdateMarkdown inserts or replaces markdown content on a page.
+//
+// See https://developers.notion.com/reference/update-page-markdown
+func (pc *PageClient) UpdateMarkdown(ctx context.Context, id PageID, request *MarkdownUpdateRequest) (*PageMarkdown, error) {
+	return doRequest[PageMarkdown](pc.apiClient, ctx, http.MethodPatch, fmt.Sprintf("pages/%s/markdown", id.String()), nil, request)
+}
+
 // PageUpdateRequest represents the request body for PageClient.Update.
 type PageUpdateRequest struct {
 	// The property values to update for the page. The keys are the names or IDs
@@ -107,6 +172,48 @@ type PageUpdateRequest struct {
 	Icon *Icon `json:"icon,omitempty"`
 	// A cover image for the page. Only external file objects are supported.
 	Cover *Image `json:"cover,omitempty"`
+	// Template to apply to the page.
+	Template *PageTemplate `json:"template,omitempty"`
+	// When true, erases all existing content from the page.
+	EraseContent *bool `json:"erase_content,omitempty"`
+	// Whether the page is locked.
+	IsLocked *bool `json:"is_locked,omitempty"`
+	// Whether the page is in the trash.
+	InTrash *bool `json:"in_trash,omitempty"`
+}
+
+// PageMoveRequest represents the request body for PageClient.Move.
+type PageMoveRequest struct {
+	Parent Parent `json:"parent"`
+}
+
+// PageMarkdown represents a page's content as markdown.
+type PageMarkdown struct {
+	Object          ObjectType `json:"object"`
+	ID              ObjectID   `json:"id"`
+	Markdown        string     `json:"markdown"`
+	Truncated       bool       `json:"truncated"`
+	UnknownBlockIDs []string   `json:"unknown_block_ids"`
+}
+
+// MarkdownUpdateRequest represents the request body for PageClient.UpdateMarkdown.
+type MarkdownUpdateRequest struct {
+	Type                string               `json:"type"`
+	InsertContent       *InsertContent       `json:"insert_content,omitempty"`
+	ReplaceContentRange *ReplaceContentRange `json:"replace_content_range,omitempty"`
+}
+
+// InsertContent specifies markdown content to insert into a page.
+type InsertContent struct {
+	Content string `json:"content"`
+	After   string `json:"after,omitempty"`
+}
+
+// ReplaceContentRange specifies a range of markdown content to replace.
+type ReplaceContentRange struct {
+	Content              string `json:"content"`
+	ContentRange         string `json:"content_range"`
+	AllowDeletingContent bool   `json:"allow_deleting_content,omitempty"`
 }
 
 // The Page object contains the page property values of a single Notion page.
@@ -126,6 +233,8 @@ type Page struct {
 	PublicURL      string     `json:"public_url"`
 	Icon           *Icon      `json:"icon,omitempty"`
 	Cover          *Image     `json:"cover,omitempty"`
+	IsLocked       bool       `json:"is_locked,omitempty"`
+	InTrash        bool       `json:"in_trash,omitempty"`
 }
 
 func (p *Page) GetObject() ObjectType {
