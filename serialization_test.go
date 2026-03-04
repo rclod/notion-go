@@ -146,6 +146,33 @@ func TestSearchFilter_OmitsEmptyFields(t *testing.T) {
 	})
 }
 
+func TestSearchRequest_OmitsEmptyFilter(t *testing.T) {
+	t.Run("no filter omits filter field", func(t *testing.T) {
+		req := SearchRequest{Query: "test", PageSize: 10}
+		b, err := json.Marshal(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(b), `"filter"`) {
+			t.Errorf("expected filter to be omitted, got %s", string(b))
+		}
+	})
+
+	t.Run("with filter includes filter field", func(t *testing.T) {
+		req := SearchRequest{
+			Query:  "test",
+			Filter: &SearchFilter{Value: "page", Property: "object"},
+		}
+		b, err := json.Marshal(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(b), `"filter"`) {
+			t.Errorf("expected filter to be present, got %s", string(b))
+		}
+	})
+}
+
 func TestDatabaseCreateRequest_InitialDataSource(t *testing.T) {
 	t.Run("omits initial_data_source when nil", func(t *testing.T) {
 		req := DatabaseCreateRequest{
